@@ -1,0 +1,54 @@
+---
+title: Sub-agents
+description: Hand a self-contained task to a sub-agent that works in its own context and returns a short report.
+icon: Bot
+---
+
+The agent can hand a self-contained task to a sub-agent that works in its own context and
+returns a short report, so the main conversation stays small. `explore` is built in: a read-only
+researcher that searches the code or the web and cites `path:line`. It runs on the fast model
+when the host has one and on the main model otherwise. The host picks the fast model in the
+settings (`F2` → Model): `auto` takes a cheaper model you can already reach, `off` keeps
+everything on the main model, or choose one; `PLURAL_FAST_MODEL` does the same from the
+environment. Several sub-agents can run in parallel.
+
+A sub-agent shows up as one `Agent` line in the conversation with what it is doing right now;
+`ctrl+o` opens everything it looked at, and the line ends with the model it used, its tool
+calls and its tokens.
+
+## Creating your own
+
+`/agents` lists them and `+ create an agent…` asks for a name, when to use it, its
+instructions, what it may touch (read only, read and run commands, or read, edit and run), which
+model and where to save it. Or add your own as Markdown files in `.agents/agents`,
+`.claude/agents` or `.plural/agents`, in the project or the home folder. The format is the one
+Claude Code uses:
+
+```markdown
+---
+name: reviewer
+description: Reviews a diff for bugs and missing tests.
+tools: Read, Grep, Glob, Bash
+model: haiku        # haiku/fast runs on the fast model, anything else on the main one
+max_turns: 20
+---
+You review the diff you are given for another agent.
+
+<task>
+- Look for bugs, missing tests and changes the diff does not explain.
+</task>
+
+<report>
+- One line per problem, with path:line.
+</report>
+```
+
+Plain instructions work too. Parts in XML tags, as Plural's own prompts and the built-in
+`explore` (`src/plural/agent/builtin_agents/explore.md`) use, help the model tell the parts
+apart.
+
+<Callout title="Same permissions as the main agent">
+  Every tool call a sub-agent makes goes through the same permissions as the main agent: deny
+  rules, the permission mode and the host's approval for edits and commands. A sub-agent cannot
+  start another one.
+</Callout>

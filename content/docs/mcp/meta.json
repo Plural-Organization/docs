@@ -1,0 +1,5 @@
+{
+  "title": "MCP servers",
+  "icon": "Plug",
+  "pages": ["index", "context-bridge"]
+}

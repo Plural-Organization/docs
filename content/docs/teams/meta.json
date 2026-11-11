@@ -1,0 +1,5 @@
+{
+  "title": "Teams",
+  "icon": "Users",
+  "pages": ["index", "presence", "briefings", "access"]
+}

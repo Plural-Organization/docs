@@ -1,0 +1,47 @@
+---
+title: Connecting MCP servers
+description: The host can connect MCP servers and the agent gets their tools, whatever model it runs on.
+---
+
+The host can connect MCP servers and the agent gets their tools, whatever model it runs on.
+Servers live in `.mcp.json` in the project or `~/.plural/mcp.json` for every session, in the
+same `mcpServers` format Claude Code and Cursor use, so a config can be copied over as is.
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `/mcp` | The servers, their status and tool count; `↑↓` chooses, `enter` turns one on or off, `ctrl+r` restarts it. `+ add a server…` opens a wizard with popular servers (Context7, Playwright, GitHub, Notion, Filesystem, Fetch, Git, Memory, Time) or your own command or URL, and asks only for what that server needs |
+| `/mcp import` | Takes the servers already set up for Claude Code (`~/.claude.json`) and Cursor (`~/.cursor/mcp.json`) |
+| `/mcp add <name> <command…>` | Launches a local server, for example `/mcp add plane npx -y @makeplane/plane-mcp-server` |
+| `/mcp add <name> <url>` | Connects a remote server over HTTP |
+| `/mcp on\|off\|restart\|rm <name>` | Turns a server on or off, restarts or removes it |
+
+`--global` on `add` saves the server for every project. Environment variables and HTTP headers
+such as tokens go in the JSON file; they never reach the room and are scrubbed from tool output.
+Remote servers that sign in with OAuth are not supported yet.
+
+```json title=".mcp.json"
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "…" }
+    }
+  }
+}
+```
+
+<Callout type="warn" title="Every call still waits for the host">
+  Every MCP tool call waits for the host's approval like a command, and `always` allows that
+  tool for the rest of the session. A run with a participant's prompt still asks in auto mode,
+  and plan mode refuses MCP calls. A server writes its stderr to
+  `~/.plural/state/logs/mcp-<name>.log`.
+</Callout>
+
+## Next
+
+<Cards>
+  <Card title="Bringing context in" href="/docs/mcp/context-bridge" description="Hand a chat from Claude, ChatGPT or Grok to your session, through the MCP gateway." />
+</Cards>

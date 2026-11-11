@@ -1,0 +1,55 @@
+---
+title: Starting a session
+description: Start plural in a project, the options it takes, and how to update it.
+---
+
+## Start a session
+
+```bash
+cd your-project
+plural
+```
+
+`plural` starts a host in the current directory and opens the client. The first lines of the
+conversation show the room link. Words that are not options become the first prompt:
+`plural "fix the failing test"`.
+
+| Option | Meaning |
+|---|---|
+| `-r`, `--resume [id\|title]` | Resume a session, see [Resuming](/docs/usage/sessions#resume-a-session) |
+| `-c`, `--continue` | Continue the latest session of this folder |
+| `-n`, `--title <title>` | Name the session |
+| `-p`, `--print` | Answer once and exit, see [Scripting](/docs/usage/sessions#use-it-from-a-script) |
+| `--workspace <dir>` | Directory the agent works in, default is the current one |
+| `--prompts open\|review` | Who may prompt directly, see [Permissions](/docs/usage/permissions) |
+| `--name <name>` | Your display name |
+| `--model <id>`, `--provider <name>`, `--effort <level>` | Model, provider (`anthropic`, `openai`, `gemini`, `ollama`…) and effort for this run only |
+| `--permission-mode default\|acceptEdits\|plan\|auto` | Start in that permission mode |
+| `--allowedTools <tools>`, `--disallowedTools <tools>` | Allow or deny tools for this run, for example `"Bash(git log *)" Read` |
+| `--port <n>`, `--bind <addr>` | Where the host listens in direct mode |
+| `--relay <url>`, `--public-url <url>` | Connect through another relay than the Plural relay and set the address in invite links |
+| `--local` | Stay on this machine: no relay, the invite works only here |
+| `--tunnel cloudflared\|ngrok` | Start a tunnel and put its address in the invite links, see [Sharing a session](/docs/usage/sharing#through-a-tunnel) |
+
+An option that does not exist is refused, so a typing mistake does not reach the host by
+accident. A long dash typed by a chat or a keyboard (`—tunnel`) is read as `--tunnel`.
+
+## Update
+
+```bash
+plural update           # install the latest release
+plural update --check   # only say whether there is one
+```
+
+`plural update` looks up the latest release on GitHub and runs the same installer as the first
+install, pinned to that version: it upgrades the host (`plural-host`) and replaces the `plural`
+program next to the one you ran, with the same progress, resume and checksum check. A download
+that was cut off continues where it stopped when you run it again. It does nothing when you are
+up to date. A copy that runs from source or from a package manager cannot replace itself and
+says so.
+
+You do not have to leave plural for it. When plural starts it asks GitHub for the latest
+release, and if there is a newer one, `● update <version>` appears next to the gear and as the
+first row of the settings (`F2`). Press `enter` on it to install; the row turns into
+`✓ installed · restart plural` when it is done. Set `PLURAL_NO_UPDATE_CHECK=1` to skip the
+look-up. Copies that run from source or from a package manager never see the offer.

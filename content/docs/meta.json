@@ -1,0 +1,16 @@
+{
+  "title": "Docs",
+  "pages": [
+    "index",
+    "getting-started",
+    "usage",
+    "teams",
+    "skills",
+    "sub-agents",
+    "mcp",
+    "plugins",
+    "configuration",
+    "security",
+    "reference"
+  ]
+}

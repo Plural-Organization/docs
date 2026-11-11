@@ -1,0 +1,67 @@
+---
+title: Security
+description: The threat model — what a guest, a host, a relay and a team member can and cannot do.
+icon: Shield
+full: true
+---
+
+Plural's one rule is that the host always decides. This table is the threat model behind that
+rule: each row is a threat, and the mitigation actually in the code.
+
+| Threat | Mitigation in code |
+|---|---|
+| Guest runs commands on host | Tool calls always need host approval; a run containing a guest prompt is tainted in both prompt modes |
+| Guest floods the agent with prompts or spends the host's budget | `review` mode makes the host approve every prompt; viewers cannot prompt; host aborts with `/abort` |
+| Guest reads or changes files outside the session folder | File tools refuse paths outside the workspace; a run with a guest's prompt can reach a folder only after the host answers a red card with read or read + write, asked every time and never remembered; a read-only grant cannot write; protected paths stay denied inside a grant. `bash` is not covered: it is unsandboxed and relies on host approval |
+| Prompt injection via guest | Provenance taint forces `ask` for write/exec |
+| Compound shell bypass (`ls; rm`) | Allow rules ignored for compound commands → `ask` |
+| Session `always` overriding deny | Base deny rules are evaluated first and cannot be overridden |
+| Compromised relay | Host signs tokens and checks permissions; relay only routes |
+| Token theft | 24h TTL, room binding, token bound to connection, revoked participants removed from state |
+| API key typed in the client reaches the wrong party | Keys go only through the local stdin pipe between a client and the host it started, never over the protocol or a relay |
+| Claude OAuth token exposed to a participant | OAuth tokens stay in the host's owner-only local data file and are never sent over the room protocol or relay |
+| Secret leakage | Path deny-list, env scrubbing for `bash`, redaction before append |
+| Agent badgering the host with variants of a rejected action | Rejection ledger per run and class, `Block (session)` deny rule |
+| Agent or guest widening its own permissions | Policy rules are events changed only by host commands; an allow rule never overrides a built-in deny or the guest taint; rules are never read from the workspace the agent can write |
+| Laundering injected text through a conversation summary | The summary is presented to the model as untrusted notes, runs keep their merged provenance, and write/exec by guest-originated turns still ask |
+| A third-party skill steering the agent | Only the host installs skills: by command, or by approving the agent's `skill_install` like an edit, which plan mode refuses; archives are size-capped, links are skipped and paths may not leave the skill folder; the `skill` tool reads only inside an installed skill and keeps the secret deny-list |
+| An MCP server acting with the host's credentials | Only the host adds or enables servers; every MCP call is an `exec` that asks the host, keeps the guest taint and is refused in plan mode; server env and headers stay in the host's files and are added to the redactor; tool hints like `readOnlyHint` are not trusted |
+| A leaked room link lets a stranger into the room | The link only lets a person ask: by default the host answers each request, the person sees nothing of the room until then, at most five wait for two minutes each, and `/invite revoke` replaces the code; with `admission=open` the link is a bearer secret and the docs say to keep it private |
+| A viewer spams the host with requests to write | A person has one request at a time, waits five minutes after a refusal, and only a few can wait at once |
+| A guest answers a request for the host, or sees who else asked | `access.decide` is host only, and a request and its answer go only to the host and the asker |
+| A person let write gets the agent to do more than a guest could | Nothing changes for the agent: their prompts are guest-originated, write and exec still ask the host, and `review` mode still holds every prompt |
+| A stranger reads who is knocking, or answers for the host | Requests, their resolutions and the waiting list go only to the host, and `join.decide` is host only |
+| A private message read by another guest | The host delivers a `chat.posted` with a recipient only to its author and its addressee: live events, history, replay and the snapshot are filtered per connection; the host, its log and the relay can still read it, so it is private from guests only |
+| Chat text steering the agent | Chat events are not part of the conversation the agent is built from, so no chat text reaches the model |
+| A stranger lists or opens a team's sessions | The directory answers only a valid member certificate plus a signature over a fresh nonce, and a host checks both against the team key it pinned |
+| A member shows a card under someone else's name, or takes over their room | The directory writes the owner of a card from the member's certificate, never from the card, and refuses a room that already belongs to another member |
+| A member floods the directory with cards or requests | A card frame is at most 8 KB, a member can show 5 sessions, at most 2 card frames a second per connection, request bodies up to 16 KB, and a card not renewed within a minute is dropped |
+| A removed member keeps showing sessions | Removal drops their cards at once and the next frame on their open connection closes it |
+| A stranger walks into a team session with a copied certificate | The join carries a signature made with the member's key over the room, a timestamp and a nonce; a certificate of another team, an expired one, a wrong room, a stale timestamp and a repeated nonce are all refused |
+| Someone the team removed keeps a seat in a session | The host checks the team roster before admitting a team member and again whenever a team member reconnects with a token; the roster is cached for 30 seconds, a failed refresh is forgiven for 5 minutes and then the host refuses |
+| A kicked team member comes back with their certificate | `/kick` bans the member for the rest of the session and the ban is stored with the session |
+| A team member in a session that is not shared with the team | Only a host that publishes to the team (the default inside a team, off with `--private`) takes a team join; any other host refuses it |
+| A teammate reads what my agent changed | A team session publishes the paths its agent edited in the last 30 minutes and the repository's address without credentials to the team; a private session publishes nothing, and file contents, prompts and shell commands never leave the host |
+| A card claims another repository or other files to cause false warnings | The owner of a card comes from the certificate, a warning is only advice and blocks nothing, and a path outside the workspace is not recorded |
+| A briefing carries instructions that steer the receiving agent | The briefing is put to the model as notes from a colleague that nobody checked, with a header saying so; the person reads it and must `/ask give` it; and after that every run of the session counts as guest-originated, so writing and running anything asks the host even in auto mode, also after a compaction and a restart |
+| A briefing leaks what the owner did not want shared | The owner agrees to each request unless they chose `team`, can switch it off, and the facts come from the tool log, not the model; secrets and paths on the deny list are left out, the text goes through the redactor and is capped |
+| A question steers the owner's model | The question is quoted to the model as a question to answer, never as an instruction, the call has no tools, and the answer is only text that the asker reads |
+| Someone floods the owner's model with requests | One request per person at a time, a minute between them, a few waiting at most, and only the host's agreement starts a call |
+| A teammate who runs a fake session replays the proof a member made for it to a real host | The proof signs the address it was made for as well as the room, and a host accepts only its own address, so what a member signed for one server is useless at another |
+| A member removed from the team keeps watching a session they are already in | The host asks the team roster every 30 seconds and revokes and disconnects connected team members who are no longer in it |
+| A host that runs for weeks loses its place in the team | The host renews its certificate while it runs and reconnects with the new one |
+| A peer's name steers the receiving model | The source of an imported briefing may only be letters, digits, spaces and a few name characters, and the TUI uses the name in the member's certificate, not the one the remote host declares |
+| A stolen member certificate | The certificate alone is useless without the member's private key, it expires, and removing the member revokes it |
+| A compromised directory adds a member | The new member can at most become a viewer of sessions that admit team viewers; writing always needs the host to approve `access.request` |
+| A viewer reads what the owner did not share | Sessions are private and unpublished by default; the card holds no prompts, replies or file contents, only names, repository, status and changed paths |
+| Context shared between agents steering the other agent | A shared summary reaches the model as untrusted notes, keeps the guest taint and never changes the system prompt |
+| Slow/flooding clients | Bounded queues, rate limit and size limit on relay |
+| A chat service, or someone with the import link, pushes text into the agent's context | The address carries a secret made by the host and kept in its state directory; the MCP gateway (a separate service) keys hosts by its hash, caps size and open offers and stores nothing, and the host connects out to it; what arrives waits for the host's answer on a card and goes to the agent's notes as background with secrets removed, never as instructions |
+
+<Callout type="warn" title="Out of scope for MVP">
+  End-to-end encryption (the relay sees content) and Docker isolation.
+</Callout>
+
+See the source for the exact modules behind each row, starting with `core/roles.py`,
+`core/policy/engine.py`, `host/policy_gate.py` and `relay/presence.py` in the
+[Plural repository](https://github.com/Plural-Organization/Plural).

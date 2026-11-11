@@ -1,0 +1,50 @@
+---
+title: Skills
+description: A folder with a SKILL.md, in the same format Claude Code, Codex and skills.sh use.
+icon: Sparkles
+---
+
+A skill is a folder with a `SKILL.md`: a name and a description up top, instructions below, and
+any files it refers to next to it. It is the same format Claude Code, Codex and the
+[skills.sh](https://skills.sh) catalog use, so skills from Vercel, Anthropic or any public
+GitHub repository work as they are.
+
+The host reads skills from `.agents/skills`, `.claude/skills` and `.plural/skills` in the
+project and in the home folder; a project skill wins over a global one with the same name. The
+agent sees each skill's name and description and loads the full instructions with the `skill`
+tool when a task matches.
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `/skills` | List the installed skills |
+| `/skills search <query>` | Search skills.sh, most installed first |
+| `/skills add <owner/repo@skill>` | Install into the project's `.agents/skills` (host) |
+| `/skills add <owner/repo@skill> --global` | Install into `~/.agents/skills` for every session (host) |
+| `/skills rm <name>` | Remove a skill Plural installed (host) |
+| `/skill:<name> [request]` | Run a skill by hand: the agent gets its instructions and your request |
+
+`/skill:grill-me my plan` works for anyone who can prompt: the room sees `my plan` marked
+`via /skill:grill-me`, and the agent gets the skill's instructions followed by the request.
+Every installed skill also costs a line of the agent's prompt on every request. A skill you only
+ever run by hand can stay out of it: add `disable-model-invocation: true` to its frontmatter,
+and the agent no longer sees it, while `/skill:<name>` still runs it. `/skills` marks such
+skills.
+
+```yaml
+---
+name: grill-me
+description: Pressure-tests a plan before you commit to it.
+disable-model-invocation: true
+---
+```
+
+The agent can search the catalog on its own and suggest a skill. It can install one too, but
+every install waits for the host's approval like an edit does, and plan mode refuses it.
+
+<Callout type="warn" title="A skill is someone else's instructions">
+  The agent will follow an installed skill's instructions with the host's permissions. Install
+  skills only from sources you trust — see [Security → a third-party skill steering the
+  agent](/docs/security).
+</Callout>

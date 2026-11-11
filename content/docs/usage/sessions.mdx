@@ -1,0 +1,80 @@
+---
+title: Resuming, scripting and importing
+description: Resume a session, drive it from a script, or continue a conversation that began in another agent.
+---
+
+## Resume a session
+
+Every session you host is kept in `~/.plural/sessions` with its folder, its title and the whole
+conversation.
+
+```bash
+plural -r                 # choose from the sessions of this folder, tab shows every folder
+plural -r refactor        # a title, a piece of a title or the start of an id
+plural -c                 # the latest session of this folder
+plural sessions           # list them
+plural sessions --json    # the same for a script
+plural rm <id>            # delete one
+```
+
+A resumed session works in the folder it was started in, even when you are somewhere else;
+`--workspace` chooses another one. The conversation continues where it stopped, the people who
+were in the room come back with their old links while those are valid, and new invites work as
+usual. The title is the first prompt unless you named it with `--title`.
+
+The chooser also lists the rooms you joined as a guest. Choosing one takes you back in without a
+new invite, as long as the link you were given is still valid (a token lasts 24 hours) and the
+host is running.
+
+## Use it from a script
+
+`plural -p` asks once, prints the answer and exits, without the screen. Text piped in goes
+before the prompt, or is the prompt.
+
+```bash
+plural -p "what does this repo do?"
+git diff | plural -p "review this change"
+plural -p "list the failing tests" --output-format json
+plural -r <id> -p "and fix the first one" --permission-mode acceptEdits
+```
+
+`--output-format` is `text` (the default, only the final answer), `json` (one object with
+`result`, `session_id`, `num_turns`, `duration_ms`, `usage`, `denied` and `error`) or
+`stream-json` (one event per line, the object last). The exit code is 0 when the run stopped
+normally and 1 when it failed. The `session_id` is a session like any other: `-r` continues it.
+
+<Callout title="Nobody is there to approve an action">
+  A run from a script that needs approval is **refused**: it is named on stderr and listed in
+  `denied`, and the agent goes on without it. Allow what a script may do with
+  `--allowedTools "Bash(npm test)"`, or with `--permission-mode acceptEdits` (file edits) or
+  `auto`. Deny rules always win, and the built-in protections cannot be switched off.
+</Callout>
+
+The model is the one you saved in the settings; `--provider` and `--model` choose another for
+this run, and the key comes from `~/.plural/credentials.json` or the usual environment variable
+(`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`…).
+
+## Continue a session from another agent
+
+Work that began in Claude Code can go on in Plural:
+
+```bash
+plural import claude              # the latest Claude Code session kept for this folder
+plural import claude:3f9a         # the one whose id starts with 3f9a
+plural import claude --workspace ~/app -n moved
+```
+
+A new session opens in that folder. The other conversation is put in your agent's notes: the
+newest turns whole and the older ones left out when they do not fit, with its tool calls and
+results cut down to one line each. Secrets are removed on the way in. The agent reads it as
+background from earlier work, not as instructions, and carries on from there; the first prompt
+you type is the continuation.
+
+Claude Code keeps its sessions per folder in `~/.claude/projects` (`CLAUDE_CONFIG_DIR` moves it),
+so run the command from the project's folder or pass `--workspace`. Codex is not supported yet.
+
+<Callout type="idea" title="Bringing a chat in instead">
+  A chat service — Claude, ChatGPT or Grok — can hand its own conversation to your session
+  through `/import`. That path goes through the MCP gateway, see
+  [MCP → Bringing context in](/docs/mcp/context-bridge).
+</Callout>

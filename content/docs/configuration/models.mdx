@@ -1,0 +1,75 @@
+---
+title: Models and providers
+description: Two adapters cover most models — the official Anthropic SDK, and the OpenAI-compatible Chat Completions format.
+---
+
+Two adapters cover most models. `anthropic` uses the official Anthropic SDK. `openai` speaks
+the OpenAI Chat Completions format, which also covers OpenRouter, Groq, Gemini, DeepSeek and
+local servers such as Ollama.
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-… plural
+
+PLURAL_PROVIDER=claude_code PLURAL_MODEL=claude-sonnet-5-5 plural
+
+PLURAL_PROVIDER=openai PLURAL_MODEL=gpt-5 OPENAI_API_KEY=sk-… plural
+
+PLURAL_MODEL=qwen3:4b PLURAL_BASE_URL=http://127.0.0.1:11434/v1 PLURAL_CONTEXT_WINDOW=4096 plural
+
+# NVIDIA NIM from the catalog
+PLURAL_PRESET=nvidia NVIDIA_API_KEY=nvapi-… plural
+```
+
+Without any of these the host runs a scripted demo agent: any text lists the workspace, and
+`$ cmd` asks to run `cmd` through `bash`.
+
+## Claude OAuth
+
+Open `F2` → Model → Claude OAuth → Sign in with Claude. The authorization page opens in your
+browser and its URL is copied to the clipboard. Paste the code it shows into Plural, then
+choose *Save and use*. The host refreshes the token automatically. `PLURAL_PROVIDER=anthropic_oauth`
+also selects a previously saved login for a standalone host. Signing out in the Model tab
+removes Plural's saved OAuth credentials.
+
+<Callout type="warn" title="Claude OAuth defaults to Haiku 4.5">
+  An OAuth account can receive an opaque `429` for other models even when the token works. The
+  Model row lists current Claude model IDs; use `← →` to choose one or `e` to enter another ID.
+  The list is a catalog, not proof of access: use *Test connection* before *Save and use*. A
+  generic OAuth `429` without `retry-after` is reported as a possible model-access restriction;
+  usage-credit limits can also cause a `429`. The same models are available through an Anthropic
+  API key when your API account has access.
+</Callout>
+
+## Claude Code and Codex CLI
+
+For a direct Claude Code session, install the official `claude` CLI, run `claude auth login`,
+then select `F2` → Model → Claude Code. Plural invokes `claude -p` with the selected model.
+Claude Code's own tools are disabled so tool requests still run through Plural's host approval
+flow. This provider uses Claude Code's sign-in, not Plural's OAuth token.
+`PLURAL_PROVIDER=claude_code` also selects it for a standalone host.
+
+To use your Codex sign-in, run `codex login` and select `F2` → Model → Codex CLI. Choose a
+model available to your Codex account. Plural streams replies from one Codex session for the
+room while its host is running.
+
+<Callout title="Separate logins, separate credentials">
+  Plural's Claude OAuth mode stores its own login and does not read credentials stored by
+  Claude Code. The separate Claude Code mode launches the installed CLI, which uses its own
+  login. Anthropic says third-party OAuth usage may draw from paid usage credits rather than
+  subscription limits and may be restricted. Plural does not identify its own requests as
+  Claude Code or promise subscription billing.
+</Callout>
+
+<Callout type="idea" title="Local servers truncate silently">
+  Ollama defaults to 4096 tokens. Start the server with a larger window
+  (`OLLAMA_CONTEXT_LENGTH`) and set `PLURAL_CONTEXT_WINDOW` to the same value so compaction
+  starts in time.
+</Callout>
+
+## The provider catalog
+
+The providers the settings screen offers (NVIDIA, Groq, DeepSeek, Ollama and the rest) are
+defined once, in `presets.py` next to the adapter that serves them, and `providers/catalog.py`
+puts them together. The host expands a preset into its adapter, endpoint and default model. The
+terminal client keeps no copy: it asks the host it started for the catalog over the control
+channel before it restores the saved model choice.

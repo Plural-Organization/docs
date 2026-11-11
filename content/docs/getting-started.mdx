@@ -1,0 +1,74 @@
+---
+title: Getting started
+description: Install Plural and open your first room.
+icon: Rocket
+---
+
+## Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Plural-Organization/Plural/main/install.sh | sh
+```
+
+macOS and Linux, arm64 and x64. Windows through WSL. The script downloads two checksummed
+programs side by side: the `plural` client and the `plural-host` host — a frozen build with
+Python and the Anthropic and OpenAI SDKs inside, so there is no `uv`, Python or dependency
+resolve at install time. Claude Code and Codex CLI need no key. To install the host from a
+package index instead, set `PLURAL_HOST_PACKAGE`.
+
+## Quick start
+
+Start in the project you want the agent to work on:
+
+```bash
+cd your-project
+plural
+```
+
+`plural` starts a host in the current directory and opens the client. The first lines of the
+conversation show the **room link**. Words that are not options become the first prompt:
+
+```bash
+plural "fix the failing test"
+```
+
+Come back to a session later with `plural -r` (or `plural -c` for the latest one of this
+folder), and ask once from a script with `plural -p "…"` — see [Usage](/docs/usage).
+
+<Callout title="The room link never expires">
+  Send it to a teammate, now or later. It works for anyone you let in, and stays the same when
+  you resume the session.
+</Callout>
+
+```bash
+plural join "ws://…"
+```
+
+## Pick a model
+
+Without a key the host runs a scripted demo agent. For a real model:
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-… plural
+```
+
+Or open `F2` → Model → Claude OAuth → Sign in with Claude, then paste the code shown in the
+browser. To use your actual Claude Code login, run `claude auth login` in a terminal and select
+`F2` → Model → Claude Code. To use your Codex sign-in, run `codex login` and select `F2` → Model
+→ Codex CLI.
+
+<Callout type="warn" title="Claude OAuth defaults to Haiku 4.5">
+  Newer Claude models may reject third-party OAuth requests even when login succeeds; use an
+  Anthropic API key for those models. See [Configuration](/docs/configuration/models) for every
+  provider.
+</Callout>
+
+`/help` lists the commands, `F2` opens the settings, `ctrl+o` opens the tool details — the full
+list is in the [reference](/docs/reference).
+
+## Next
+
+<Cards>
+  <Card title="Usage" href="/docs/usage" description="Resume, continue, script and import sessions." />
+  <Card title="Teams" href="/docs/teams" description="Run plural with people who trust each other." />
+</Cards>

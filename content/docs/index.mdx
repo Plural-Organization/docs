@@ -1,13 +1,48 @@
 ---
-title: Hello World
-description: Your first document
+title: Introduction
+description: Plural is the shared room for your coding agent — one host, one agent, everyone watching and typing together.
+icon: House
 ---
 
-Welcome to the docs! You can start writing documents in `/content/docs`.
+**Plural** is the shared room for your coding agent. One person — the **host** — runs the
+agent on their own machine with their own credentials and their own key. Teammates **join** from
+a terminal or a browser and watch every reply, tool call and diff as it happens, type prompts of
+their own, and talk to each other without the agent ever seeing it.
 
-## What is Next?
+Nothing the agent writes or runs reaches disk without the host's say: write and exec actions
+always wait for approval, and a run started by a guest can never be waved through by a rule. That
+one rule — **the host always decides** — is what the rest of these docs build on.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Plural-Organization/Plural/main/install.sh | sh
+cd your-project
+plural
+```
+
+## Find your way around
 
 <Cards>
-  <Card title="Learn more about Next.js" href="https://nextjs.org/docs" />
-  <Card title="Learn more about Fumadocs" href="https://fumadocs.dev" />
+  <Card title="Getting started" href="/docs/getting-started" description="Install Plural and open your first room." />
+  <Card title="Usage" href="/docs/usage" description="Start, resume, script and import sessions from the CLI." />
+  <Card title="Teams" href="/docs/teams" description="Create a team, watch a teammate, share context between agents." />
+  <Card title="Skills" href="/docs/skills" description="Reusable, catalog-shared instructions the agent loads on its own." />
+  <Card title="Sub-agents" href="/docs/sub-agents" description="Hand off self-contained tasks to a researcher that reports back." />
+  <Card title="MCP servers" href="/docs/mcp" description="Connect tools, and bring context in from Claude, ChatGPT or Grok." />
+  <Card title="Plugins" href="/docs/plugins" description="Add slash commands, agent tools and hooks to a room." />
+  <Card title="Configuration" href="/docs/configuration" description="Every host setting, model provider and environment variable." />
+  <Card title="Security" href="/docs/security" description="The threat model: what every guest, host and relay can and cannot do." />
+  <Card title="Reference" href="/docs/reference" description="Slash commands, keyboard shortcuts and the plural-host CLI." />
 </Cards>
+
+## The shape of a room
+
+- **A shared live session.** The host runs the agent; guests join and see everything, live.
+- **Two ways to prompt.** `open` mode lets everyone talk to the agent directly; `review` mode
+  turns a guest's prompt into a proposal the host approves, edits or rejects.
+- **Permission modes.** The host decides, at any moment, how much the agent may do without
+  asking — from "ask before every change" to full `auto` mode.
+- **Direct or relayed.** Connect over your own network, or through a relay that never decides
+  permissions and never stores content.
+
+Everything here describes the open-source `plural` CLI and `plural-host` — see the
+[source on GitHub](https://github.com/Plural-Organization/Plural) for the code behind it.

@@ -1,14 +1,15 @@
 import { createGetUrl } from 'fumadocs-core/source';
 
-export const appName = 'My App';
+export const appName = 'Plural';
 export const docsRoute = '/docs';
-export const docsImageRoute = '/og/docs';
-export const docsContentRoute = '/llms.mdx/docs';
+// Everything below lives under /docs/* too, so a single rewrite on the main
+// site (plrl.host/docs/:path*) covers the whole zone — see next.config.mjs.
+export const docsImageRoute = '/docs/og/docs';
+export const docsContentRoute = '/docs/llms.mdx/docs';
 
-// fill this with your actual GitHub info, for example:
 export const gitConfig = {
-  user: 'fuma-nama',
-  repo: 'fumadocs',
+  user: 'Plural-Organization',
+  repo: 'Plural',
   branch: 'main',
 };
 

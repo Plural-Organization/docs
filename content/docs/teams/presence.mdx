@@ -1,0 +1,73 @@
+---
+title: Presence and watching a teammate
+description: Share your session with the team, watch what a teammate is doing, and see when two agents touch the same file.
+---
+
+## Showing your session to the team
+
+```bash
+plural                        # in a team, this session is shared with it
+plural --private              # keep this one to yourself
+plural --tunnel ngrok         # shared through your own tunnel instead of the team relay
+plural ls                     # who shares what right now
+plural ls --json
+```
+
+Once you are in a team (`team create` or `team join`), every session you start is shared with
+it, and the top bar says `◆ Backend`. `plural --private` starts one that the team does not see;
+the bar then reads `this session is private`. Outside a team nothing is shared. A shared session
+needs an address others can reach, so it uses the team relay, `--relay`, `--public-url` or a
+tunnel. The team sees your name, the repository and branch, the title, whether the agent is
+working or waiting for you, and how many people watch.
+
+<Callout type="warn" title="A teammate sees everything in the session">
+  A teammate who opens the session sees everything in it as a viewer, prompts and replies
+  included, so use `--private` for work you do not want shown. The card goes away when you
+  quit, or about a minute after your machine drops off.
+</Callout>
+
+The side panel has a SPACES section: your own session first, then the team's, refreshed every
+few seconds: `●` working, `◆` waiting for its host, `○` idle, with who, repository and branch,
+and `👁 2` when two people watch.
+
+**Click a teammate to open their session** in the main area. You see all of it, live, as a
+viewer, and your own session keeps running in the background: a click on `you` takes you back,
+and `ctrl+w` closes the space you are in. What you type goes to the session you are looking at;
+`alt+←` and `alt+→` remain available for moving between words in the prompt. If your own agent
+needs you while you are away, its row turns `◆ waiting`, the bell rings and the terminal title
+says so.
+
+## Watching a teammate
+
+```bash
+plural join @alia            # opens alia's shared session, you can read (or click her in the panel)
+plural join @alia:web        # when alia shares more than one, say the repository
+```
+
+You come in as a viewer: you see the whole conversation and what the agent does, you cannot
+prompt or answer approvals. Nobody has to let you in, because the team already vouches for you,
+and your name is the one in the team. The host sees you in the list of participants and in the
+team card (`👁 1`), and can remove you with `/kick alia`. A host that removed you keeps you out
+for the rest of that session even though you are still in the team. A host asks the team again
+whenever you come back, so someone removed from the team loses their seat within about half a
+minute.
+
+If the host's relay is not the one the team uses, nothing changes for you: the card carries the
+address to connect to.
+
+## When two agents work on the same file
+
+A team session also tells the team which files its agent changed in the last half hour and
+which repository it is in (the remote address without any credentials). When two people in the
+same repository changed the same file, both of them are told, nothing is blocked:
+
+- your row in the side panel says `⚠ alia also changed src/auth.py` and hers is marked `⚠`, and
+  the conversation gets a note and a short message when it first happens;
+- `plural ls` prints the same line under both sessions;
+- when your agent asks to edit or write a file a teammate changed in the last half hour, even if
+  you have not touched it yet, the approval card says
+  `⚠ src/auth.py was also changed by alia 3 min ago on feat/x`, so you can wait, ask her, or go
+  on.
+
+Only edits and writes by the agent count, not commands it runs in the shell, and only files
+inside the workspace. A session that is not a team session shares nothing.

@@ -1,0 +1,77 @@
+---
+title: Environment variables
+description: Every host setting can be passed as an environment variable with the PLURAL_ prefix.
+---
+
+Every host setting can be passed as an environment variable with the `PLURAL_` prefix. The
+model and the API key are normally set from the settings screen of the client (`F2`): the
+choice is kept in `tui.json` and the key in `credentials.json`, readable only by you, both in
+the data directory. Claude OAuth tokens are kept separately in `anthropic-oauth.json` with
+owner-only permissions. Environment variables still work and are used when nothing is chosen
+there.
+
+## Model and provider
+
+| Variable | Default | Description |
+|---|---|---|
+| `PLURAL_PRESET` | none | A provider from the catalog, for example `nvidia`, `groq`, `deepseek`, `openrouter` or `ollama`. It sets the provider, endpoint and default model, and reads the key from the preset's own variable (`NVIDIA_API_KEY`, `GROQ_API_KEY`, …) or `PLURAL_API_KEY`, never another vendor's key. The list is in `src/plural/agent/providers/catalog.py` |
+| `PLURAL_PROVIDER` | by key | `fake`, `anthropic`, `anthropic_oauth`, `claude_code` or `openai`. When unset it follows `ANTHROPIC_API_KEY`, then `OPENAI_API_KEY` or `PLURAL_BASE_URL` with `PLURAL_MODEL`, and falls back to the demo agent |
+| `PLURAL_MODEL` | `claude-opus-5-5` for Anthropic API keys; `claude-haiku-4-5` for Claude OAuth; `claude-sonnet-5-5` for Claude Code | Model id, required for `openai` |
+| `PLURAL_API_KEY` | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | Provider API key |
+| `PLURAL_BASE_URL` | provider default | Custom endpoint, for example a local server |
+| `PLURAL_EFFORT` | provider default | `low`, `medium`, `high`, `xhigh` or `max` |
+| `PLURAL_MAX_OUTPUT_TOKENS` | provider default | Output token cap per model response |
+| `PLURAL_FAST_MODEL` | picked from your credentials | The cheaper model for work that does not need the main one, today the conversation summary. See [Models](/docs/configuration/models) |
+| `PLURAL_FAST_PROVIDER` | the main provider | Provider for `PLURAL_FAST_MODEL`, for example `openai` to run it on `OPENAI_API_KEY` while the main model is Claude |
+| `PLURAL_CONTEXT_WINDOW` | from the model | Model context size in tokens. Set it to the real window for local models |
+
+## Session and sharing
+
+| Variable | Default | Description |
+|---|---|---|
+| `PLURAL_PROMPT_MODE` | `open` | `open` or `review`. A resumed room keeps its last mode when unset |
+| `PLURAL_WORKSPACE` | current directory | Directory the agent works in |
+| `PLURAL_DATA_DIR` | `~/.plural` | Event logs, host key, attachments, client preferences |
+| `PLURAL_BIND_HOST` | `127.0.0.1` | Bind address for direct mode |
+| `PLURAL_PORT` | `7777` | Port for direct mode |
+| `PLURAL_RELAY_URL` | `wss://relay.plrl.host` | Relay URL. A host with no address of its own uses the Plural relay; `--local`, `--bind` and `--public-url` opt out |
+| `PLURAL_PUBLIC_URL` | none | Public URL used in invite links |
+| `PLURAL_ADMISSION` | `approve` | `approve`: the host lets in everyone who uses the room link; `open`: anyone with it goes in at once |
+| `PLURAL_JOIN_TIMEOUT_S` | `120` | Seconds before an unanswered request to join lapses |
+| `PLURAL_MAX_PENDING_JOINS` | `5` | People who may wait to be let in at once |
+| `PLURAL_MAX_PARTICIPANTS` | `20` | People in the room at once |
+| `PLURAL_GUEST_RUN_TOKENS` | none | Token budget for a run that includes a guest's prompt. Input, cache writes and output count; cache reads do not. The run ends after the turn that reaches it |
+| `PLURAL_TOKEN_TTL_S` | `86400` | Capability token lifetime, at most 24 hours |
+| `PLURAL_INVITE_TTL_S` | `3600` | Invite link lifetime |
+| `PLURAL_MAX_IMAGE_BYTES` | `2500000` | Largest image a participant may attach, at most `2900000` so it fits a 4 MB message |
+| `PLURAL_TYPING_TTL_S` | `6` | Seconds after which a typing indicator lapses without a refresh |
+
+## Runs and context
+
+| Variable | Default | Description |
+|---|---|---|
+| `PLURAL_FIRST_TOKEN_TIMEOUT_S` | `120` | Seconds to wait for the model's first output before the run fails |
+| `PLURAL_IDLE_TIMEOUT_S` | `60` | Seconds of silence mid-response before the run fails |
+| `PLURAL_COMPACT_RESERVE` | `16384` | Tokens left for the reply: the conversation is summarized once it comes this close to the window, or reaches half of a window smaller than twice this |
+| `PLURAL_COMPACT_KEEP` | `20000` | Tokens of the newest conversation a compaction keeps as they are, at most half of the size it compacts at; the rest is summarized |
+| `PLURAL_DUMP_REQUESTS` | `false` | Save every request sent to the model as JSON in `~/.plural/logs/requests/<room>/`, images left out |
+| `PLURAL_APPROVAL_TIMEOUT_S` | `120` | Seconds before an approval expires |
+| `PLURAL_REJECTION_LIMIT` | `2` | Rejections of one kind of action per run before the agent stops asking the host |
+| `PLURAL_PINNED_TOOLS` | none | Comma-separated tools or groups the agent always sees, for example `browser,board`. Other tools besides read, grep, glob, ls, edit, write, bash and skill are loaded on demand with `tool_search` |
+
+## Web search and browser
+
+| Variable | Default | Description |
+|---|---|---|
+| `PLURAL_WEB_SEARCH` | `true` | Give the agent `web_search`. Works with an Anthropic or OpenAI API key and with Claude OAuth; there is no search with Claude Code, Codex CLI or a custom `PLURAL_BASE_URL`. Each search waits for approval like other tools |
+| `PLURAL_WEB_SEARCH_MODEL` | session model | Model that runs the search, written as `provider:model`, for example `anthropic:claude-haiku-4-5` |
+| `PLURAL_WEB_SEARCH_CONTEXT_SIZE` | `medium` | `low`, `medium` or `high`: how much page text the search reads (OpenAI) |
+| `PLURAL_WEB_SEARCH_MAX_USES` | `5` | Searches per `web_search` call (Anthropic) |
+| `PLURAL_WEB_SEARCH_ALLOWED_DOMAINS` / `PLURAL_WEB_SEARCH_BLOCKED_DOMAINS` | none | JSON lists such as `["docs.python.org"]`; only one of the two at a time on Anthropic |
+| `PLURAL_WEB_SEARCH_CITY` / `_REGION` / `_COUNTRY` / `_TIMEZONE` | none | Location the results are localized for, for example `Almaty`, `KZ`, `Asia/Almaty` |
+| `PLURAL_BROWSER` | `launch` | The browser the agent drives through Playwright MCP. `launch` opens a Chrome window of its own on first use; a CDP endpoint attaches instead (`chrome`); `off` turns it off |
+
+<Callout title="A flag always wins over a variable">
+  Every CLI option in [Usage](/docs/usage) can also be set this way, and a flag passed at start
+  wins over the saved choice in the client or the environment.
+</Callout>

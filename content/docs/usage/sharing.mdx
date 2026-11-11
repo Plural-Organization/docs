@@ -1,0 +1,107 @@
+---
+title: Sharing and joining a room
+description: The room link, letting people in, and talking to the team without the agent hearing it.
+---
+
+## Share a session
+
+There are three ways to let people reach your host, chosen in the client: `F2` → Session →
+*Who can join*.
+
+| Way | Who can join | What you need |
+|---|---|---|
+| **This machine** | only you | nothing — or start with `--local` |
+| **Same network** | people on your Wi-Fi, office network or VPN | nothing. The invite link carries your network address, and the host listens on every interface |
+| **Over the internet** (default) | anyone you let in | nothing: the Plural relay (`relay.plrl.host`), or the address of your own with `--relay` |
+
+With *Over the internet* the host connects out to the relay and so does every guest — nobody
+opens a port, which is what makes it work from a home network. The relay only routes frames: it
+never decides permissions and never stores content.
+
+## Through a tunnel
+
+A tunnel gives your host a public address without a server of your own, with one command:
+
+```bash
+plural --tunnel cloudflared   # needs the cloudflared program, no account; address changes each start
+plural --tunnel ngrok         # needs the ngrok program and a free account
+```
+
+The first lines of the conversation show an invite whose link carries the tunnel address
+(`wss://…`); when you quit, the tunnel stops with the host. The tunnel provider terminates TLS,
+so it can read the traffic — trust it like you would a relay — and your host port is reachable
+from the internet while it is up. Share the link only with the people you mean, and end it with
+`/invite revoke` if it leaks.
+
+## Join a session
+
+```bash
+plural join "ws://host:7777/r_…?invite=…" --name alia
+```
+
+## Let people in
+
+The link at the top of the conversation is the **room link**. It is permanent: it never
+expires, it works for any number of people and it stays the same when you resume the session
+(while the address of your host stays the same). You can send it at any time.
+
+Anyone who opens it waits on a screen that says the host has to let them in. You get a card in
+the list of things that wait for you, with their name and the program they use, and a bell if
+you have it on:
+
+| Key | Answer |
+|---|---|
+| `y` or `enter` | let them in as a participant |
+| `v` | let them in as a viewer |
+| `n` | refuse |
+
+Until you answer they see nothing of the room. A request that nobody answers lapses after two
+minutes, at most five people can wait at once, and a room holds twenty people. After you let
+someone in they come back on their own for 24 hours without asking again.
+
+| Command | Does |
+|---|---|
+| `/invite` | copy the room link |
+| `/invite once`, `/invite viewer` | one-time invites for one person, who go in without your answer: a participant or a viewer, valid for an hour |
+| `/invite revoke` | end the room link: those waiting are refused, the old link stops working and the new one is copied. People who are already in stay |
+| `/invite open` | anyone with the link goes in at once, for a team you trust. The link is then as good as a password, keep it private |
+| `/invite approve` | back to letting each person in (the default) |
+
+The same choice is in `F2` → Session → *People who use the room link*. A host started by a
+script can use `--admission open` (or `PLURAL_ADMISSION=open`).
+
+Someone who joined by a one-time invite or who is already in, with a saved token, is never
+asked.
+
+A teammate can also join from a browser: open the web client, paste the link and type a name.
+The web client shows the same session, approvals and queue as the terminal. A page served over
+https can only reach a host through a relay with `wss://`; over plain `ws://` serve the web
+client over http on the same network.
+
+## Talking to the team
+
+Not everything you type is for the agent. Two forms stay between people, and the agent never
+receives them:
+
+| You type | Who reads it |
+|---|---|
+| `/team lunch at one` (also `/to-team`, `/chat`) | everyone in the room |
+| `@alia can you review this?` at the start of a line | only Alia, and you see your own copy |
+
+Typing `@` lists the people in the room, `tab` completes the name. A tag inside a team message
+(`/team @alia look at this`) is read by everyone and also alerts Alia. An `@` that names no one
+in the room, such as `@src/app.ts`, is still a prompt for the agent.
+
+The person you write to hears the terminal bell and sees a short message at the top right. The
+browser plays a short sound and marks the tab title when the page is in the background. Turn the
+bell off in `F2` → Session → *Bell on mentions*.
+
+Participants and the host can write; viewers can read the team chat but cannot write and cannot
+be written to privately. Messages are kept in the session log, so a person who was away finds
+them on return, and a late joiner sees the team chat but not what was private.
+
+<Callout type="warn" title="A private message is private from guests, not from the host">
+  It is stored in the host's log, `plural-host export` includes it, and it travels through the
+  relay unencrypted. Do not use it for anything you would not say with the host and the relay
+  operator listening.
+</Callout>
