@@ -1,0 +1,64 @@
+---
+title: Protocol v1
+description: JSON over WebSocket — the envelope every frame uses, how a relay frames a room, and the host's local control channel.
+icon: Cable
+---
+
+Plural speaks JSON over WebSocket. Every frame is an `Envelope`
+(`src/plural/protocol/envelope.py`):
+
+```text
+v, id, kind (cmd|evt|ack), type, room, ts, actor, seq, to, token, re, ok, error, payload
+```
+
+- **Commands** live in `src/plural/protocol/commands.py`, discriminated by `type`.
+- **Events** live in `src/plural/protocol/events.py`. Durable events carry `seq`, transient ones
+  do not.
+- **Unknown fields are ignored.** An unknown `type` is rejected with `invalid`.
+- **JSON Schema for clients:** `uv run python scripts/gen_schema.py` writes
+  `web/src/protocol/schema.json`.
+
+<Cards>
+  <Card title="Session state" href="/docs/protocol/session" description="Prompt and permission modes, context, queue, live output, agent and policy." />
+  <Card title="People" href="/docs/protocol/people" description="Joining, writing access, briefings, team members, chat and presence." />
+  <Card title="Capabilities" href="/docs/protocol/capabilities" description="MCP servers, models and sub-agents, usage and skills." />
+</Cards>
+
+## Relay framing
+
+The host opens `/host/{room}` with `relay.open`: its public key and a signature over the room id.
+Guests connect to `/{room}`. The relay wraps each guest's frames into `relay.frame{conn,data}` and
+reports `relay.closed` when a guest leaves. The framing lives in `src/plural/protocol/relay.py`.
+The relay itself never decides permissions — see [Security](/docs/security).
+
+## Host control channel
+
+<Callout title="Not part of the wire protocol">
+  This is the private channel between a client and the host it started itself. It never crosses
+  the network.
+</Callout>
+
+A client that started its own host with `plural-host host --json` keeps the host's stdin open and
+writes one JSON object per line:
+
+```json
+{"id": "1", "type": "configure", "config": {"provider": "…", "model": "…", "base_url": "…", "api_key": "…", "context_window": 0}}
+```
+
+`type` is one of `configure`, `test`, `catalog` or `install`. The host answers on stdout with
+`{"type": "result", "id", "ok", …}`.
+
+| Type | What it does |
+|---|---|
+| `configure` | Swaps the provider and returns the new `agent` label |
+| `test` | Makes a short real request and returns `message` or `error` |
+| `catalog` | Returns the provider presets (each with the optional SDK it needs, `extra`) and `extras`, the optional model SDKs (`anthropic`, `openai`) with whether each is installed |
+| `install` | Takes `"extra": "anthropic" \| "openai"` and installs that SDK into the host's own environment from the pins its package declares, so a client can offer it without restarting the host |
+
+Closing stdin stops the host.
+
+<Callout type="warn" title="Keys never leave the pipe">
+  API keys travel only through this local pipe, never in protocol frames, argv or the log, and a
+  key received here is added to the redactor at once. For `anthropic_oauth`, the host reads its
+  own `anthropic-oauth.json` file; OAuth tokens do not enter control frames.
+</Callout>

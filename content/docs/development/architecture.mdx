@@ -1,0 +1,88 @@
+---
+title: Architecture
+description: The layout of the code, how the protocol and its fixtures are generated, the provider catalog and how to see what a session cost.
+icon: Blocks
+---
+
+## Layout
+
+```text
+src/plural/
+├── protocol/   wire models, envelope, codec          (pure)
+├── core/       state reducer, roles, policy engine   (pure)
+├── security/   tokens, host keys, redaction
+├── agent/      loop, tools, sandbox, providers
+│   ├── prompts/    the agent's prompts as Markdown, their parts in XML tags
+│   ├── builtin_agents/, builtin_skills/   explore and plural-plugins, in the user format
+│   ├── providers/  api/anthropic, api/openai_compat, cli/: each adapter with its presets.py
+│   └── tools/  core/ declared on every request, extra/ loaded with tool_search
+├── storage/    SQLite event store, migrations, export
+├── host/       session actor, gateway, transports
+├── relay/      relay router
+├── client/     connection and projection, used by tests
+└── cli/        plural-host entry point
+client/         @plural/client, the TypeScript protocol client
+tui/            the terminal client
+web/            the browser client: screens, components, hooks and lib in web/src
+```
+
+<Callout title="Layers are enforced">
+  `import-linter` checks them: `core` and `protocol` do no I/O, `agent` knows nothing about
+  transports or storage, and `relay` knows nothing about sessions, policy or content. The reasons
+  are in [ADR 0001](/docs/design-decisions/0001-hexagonal-event-sourced-host).
+</Callout>
+
+## The protocol
+
+The JSON schemas in `client/src/protocol/` and the TypeScript types are generated from the Python
+models:
+
+```bash
+uv run python scripts/gen_schema.py
+npm run gen --workspace client
+uv run python scripts/gen_fixtures.py
+```
+
+The fixtures are produced by the Python reducer and replayed by the TypeScript tests, so the two
+implementations cannot drift apart unnoticed. See [Protocol](/docs/protocol).
+
+The team signatures are checked the same way. `scripts/gen_team_vectors.py` writes
+`client/test/fixtures/team-vectors.json`: request and join messages, their ed25519 signatures from
+a fixed key, and the tunnel hosts, all made by the Python code. The Python, terminal and browser
+tests each reproduce those values exactly, so a change to what is signed fails all three until it
+is made in all three.
+
+## Provider catalog
+
+The providers the settings screen offers (NVIDIA, Groq, DeepSeek, Ollama and the rest) are defined
+once, in `presets.py` next to the adapter that serves them. `providers/api/openai_compat/presets.py`
+holds NVIDIA, Groq, DeepSeek and the other OpenAI-compatible ones, and `providers/catalog.py` puts
+them together. The host expands a preset into its adapter, endpoint and default model.
+
+The terminal client keeps no copy: it asks the host it started for the catalog over the
+[control channel](/docs/protocol#host-control-channel) (`{"type": "catalog"}`) before it restores
+the saved model choice.
+
+## What a session cost
+
+The host started by the terminal client logs JSON lines to `~/.plural/logs/host.log`, each with
+the `room`, and with the `run_id` while a run is going. Three kinds of line say where tokens and
+time went:
+
+| Line | What it tells you |
+|---|---|
+| `llm.call` | One per model call: its `purpose` (`turn`, `compact`, `briefing`, `ask`), the tokens billed (`input`, `cache_read`, `cache_write`, `output`), `hit` (the share of the prompt read from the provider's cache), and `first_ms` and `total_ms`. A sub-agent's lines also carry `agent` and `agent_model` |
+| `tool.call` | The tool, whether it was allowed, how long the approval (`wait_ms`) and the call (`run_ms`) took, the size of its result and whether it was truncated |
+| `context.compacted` | Why the conversation was summarized, and its size before and after |
+
+```bash
+jq -c 'select(.event == "llm.call") | {purpose, input, cache_read, cache_write, hit}' ~/.plural/logs/host.log
+```
+
+A `hit` that stays low after the first turn means something changes the start of each request.
+With `PLURAL_DUMP_REQUESTS=1` every request is saved, and `scripts/prefix_diff.py` names where each
+one stops repeating the one before it:
+
+```bash
+uv run python scripts/prefix_diff.py ~/.plural/logs/requests/<room>
+```

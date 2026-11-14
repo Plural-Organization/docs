@@ -1,0 +1,36 @@
+---
+title: Your own machine
+description: Keep a host running as a service on a Mac mini, a home server or any box you can shell into.
+icon: HardDrive
+---
+
+Install Plural with `install.sh`, then keep the host running as a service with a fixed room.
+First, tell it where the relay is and what to work on:
+
+```bash
+mkdir -p ~/.config/plural
+cat > ~/.config/plural/host.env <<'ENV'
+PLURAL_RELAY_URL=wss://relay.example.com
+PLURAL_ROOM=r_team
+PLURAL_WORKSPACE=/home/you/project
+ANTHROPIC_API_KEY=sk-ant-...
+ENV
+chmod 600 ~/.config/plural/host.env
+```
+
+Then register it with your system:
+
+- **Linux:** copy
+  [`deploy/systemd/plural-host.service`](https://github.com/Plural-Organization/Plural/blob/main/deploy/systemd/plural-host.service)
+  to `~/.config/systemd/user/`, then `systemctl --user enable --now plural-host`. The links are
+  in `journalctl --user -u plural-host`.
+- **macOS:** copy
+  [`deploy/launchd/dev.plural.host.plist`](https://github.com/Plural-Organization/Plural/blob/main/deploy/launchd/dev.plural.host.plist)
+  to `~/Library/LaunchAgents/`, then
+  `launchctl load ~/Library/LaunchAgents/dev.plural.host.plist`. The links are in
+  `~/Library/Logs/plural-host.log`, readable only by you.
+
+<Callout title="The room survives restarts">
+  The room id stays the same across restarts, so the log and the session continue where they
+  were.
+</Callout>

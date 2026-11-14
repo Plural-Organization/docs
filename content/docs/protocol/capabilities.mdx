@@ -1,0 +1,56 @@
+---
+title: Capabilities
+description: How MCP servers, models, sub-agents, usage and skills appear in session state and which commands change them.
+icon: Puzzle
+---
+
+## MCP servers
+
+`SessionState.mcp` lists the host's MCP servers and follows `mcp.changed`. Each entry has:
+
+| Field | Values |
+|---|---|
+| `name` | The server's name |
+| `transport` | `stdio` or `http` |
+| `scope` | Where it is configured |
+| `status` | `connecting`, `ready`, `failed` or `off` |
+| `tools`, `error` | What it offers, or why it failed |
+
+The host-only commands `mcp.add` (`name`, a `command` with `args` or a `url`, `scope`),
+`mcp.toggle` (`name`, `enabled`), `mcp.restart`, `mcp.remove` and `mcp.import` change them.
+Connecting happens in the background and shows up as later `mcp.changed` events.
+
+<Callout type="warn" title="Secrets stay on the host">
+  Server environment and headers never appear in events. MCP tools reach the agent as
+  `mcp__<server>__<tool>` with risk `exec` and subject `<server>/<tool>`.
+</Callout>
+
+## Models and sub-agents
+
+`agent.changed` carries the main model's label in `agent` and the fast model's in `fast` (empty
+when there is none); `SessionState.fast_agent` follows it.
+
+`SessionState.agents` lists the sub-agents (`name`, `description`, `role` of `fast` or `main`,
+`tools`, `scope`, `read_only`) and follows `agents.changed`. The host-only `agents.create`
+(`name`, `description`, `prompt`, `tools`, `model`, `scope`) writes an agent file into
+`.agents/agents`, and `agents.remove` deletes one Plural wrote.
+
+A sub-agent is the `agent` tool, with risk `read` when all its tools read and `exec` otherwise.
+Its own tool calls go through the host's gate and stream into the `agent` call's output.
+
+## Usage
+
+At the end of every run the host appends `usage.recorded` with `lines`. Each line has a `role`, a
+`model`, an `agent` (empty for the conversation, `compact` for summaries, or a sub-agent's name),
+`uses` and `usage`. `SessionState.usage` adds them up per role, model and agent.
+
+## Skills
+
+`SessionState.skills` lists the installed skills (`name`, `description`, `scope` of `project` or
+`global`) and changes with `skills.changed`, which also names what was `added` and `removed`.
+
+| Command | Who | What happens |
+|---|---|---|
+| `skills.search` | Participants and the host | Answers the sender alone with a transient `skills.found` holding `hits` of `package` (`owner/repo@skill`), `name` and `installs` from skills.sh |
+| `skills.install` | Host only | Downloads the skill from GitHub in the background (`scope` defaults to `project`); a failure comes back to the sender as an `error` event |
+| `skills.remove` | Host only | Deletes a skill from a folder Plural installs into |

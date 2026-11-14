@@ -1,0 +1,55 @@
+---
+title: Contributing to Plural
+description: Set up the repository, run every check CI runs, run the clients from source and cut a release.
+icon: Code
+---
+
+The host is Python 3.12+ managed with [uv](https://docs.astral.sh/uv/). The clients are
+TypeScript on Node 22+ and Bun, in npm workspaces. Source:
+[Plural-Organization/Plural](https://github.com/Plural-Organization/Plural).
+
+## Set up
+
+```bash
+uv sync
+npm install
+```
+
+## Check everything
+
+These are the same checks CI runs:
+
+```bash
+uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run lint-imports
+uv run python scripts/gen_schema.py --check && uv run python scripts/gen_fixtures.py --check
+uv run python scripts/gen_team_vectors.py --check
+uv run pytest
+
+npm run typecheck --workspace client && npm test --workspace client
+npm run typecheck --workspace tui && npm test --workspace tui
+npm run typecheck --workspace web && npm test --workspace web && npm run build --workspace web
+```
+
+## Run from source
+
+```bash
+export PLURAL_HOST_CMD="uv run plural-host"
+npm run dev --workspace tui -- --workspace ~/some-project
+```
+
+| Command | What it gives you |
+|---|---|
+| `npm run demo --workspace tui` | A busy session without a host, handy when working on the interface |
+| `npm run build --workspace tui` | Compiles the client into `dist-bin/plural` |
+| `npm run dev --workspace web` | The browser client on http://localhost:5173. Join it with the invite or the host link of a running host |
+| `npm run build --workspace web` | A static site in `web/dist` |
+
+## Releasing
+
+A tag `vX.Y.Z` that matches `__version__` and the version of the client builds the Python package
+and the binaries for macOS and Linux. It publishes them after the maintainer approves the `pypi`
+environment.
+
+<Callout title="Why decisions are written down">
+  Design decisions are recorded as short records, see [Design decisions](/docs/design-decisions).
+</Callout>
