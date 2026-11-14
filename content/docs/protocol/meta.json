@@ -1,0 +1,5 @@
+{
+  "title": "Protocol",
+  "icon": "Cable",
+  "pages": ["index", "session", "people", "capabilities"]
+}

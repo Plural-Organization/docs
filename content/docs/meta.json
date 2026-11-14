@@ -11,6 +11,12 @@
     "plugins",
     "configuration",
     "security",
-    "reference"
+    "reference",
+    "---Run it yourself---",
+    "self-hosting",
+    "---Build on it---",
+    "protocol",
+    "development",
+    "design-decisions"
   ]
 }

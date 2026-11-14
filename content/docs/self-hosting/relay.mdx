@@ -1,0 +1,94 @@
+---
+title: The relay
+description: Run a relay for your team — limits, proxies, clients-only mode, the team directory, and recipes for Railway, Docker and Render.
+icon: Waypoints
+---
+
+The relay is a small, deliberately dumb server. It routes frames between a host and its guests,
+and it never decides permissions and never stores content. That is why it is safe to put on the
+internet — and why you can run one per team.
+
+## Limits and clean-up
+
+A relay that anyone can reach needs limits, so it has them:
+
+- A room is forgotten **15 minutes** after its host left and no one is in it. The host can come
+  back within that time and the room is still its own. After it the room id is free.
+- One address can host **5 rooms** and bring **30 guests** at once, and can open at most 20
+  connections in a burst and 2 per second after that. A host or a guest over a limit is refused
+  with the close code `4429`.
+- The relay holds at most **50 rooms**.
+
+Behind a proxy every client looks like the proxy. Tell the relay how many proxies are in front of
+it with `PLURAL_RELAY_PROXY_HOPS` and it takes the client address from the `X-Forwarded-For`
+header. The images set it to `1`, which is right for Caddy, Railway and Render. Use `0` when the
+relay is reached directly.
+
+<Callout title="Every guest shows the same peer?">
+  If the relay log shows the same `peer=` for different people, raise the number of hops, or
+  raise the limits with `PLURAL_RELAY_MAX_ROOMS`, `PLURAL_RELAY_ROOMS_PER_PEER` and
+  `PLURAL_RELAY_GUESTS_PER_PEER`.
+</Callout>
+
+## Only Plural clients
+
+A public relay sees scanners and stray scripts. `plural-host relay --clients-only` (or
+`PLURAL_RELAY_CLIENTS_ONLY=1`) refuses any request that does not call itself a Plural client, with
+a `403`. Every Plural client says `User-Agent: plural/<version>` (`plural-client` for the
+TypeScript client). A browser cannot set that header, so list the address of your web client with
+`--web-origin https://web.example.com` (`PLURAL_RELAY_WEB_ORIGINS`, comma separated). `/healthz`
+stays open for health checks.
+
+<Callout type="warn">
+  This is a filter, not authentication: anyone can send the header, so the limits above still
+  apply.
+</Callout>
+
+## Teams
+
+A relay can also keep a team directory: who is in which team, and the invite codes. Start it with
+a file for the data:
+
+```bash
+plural-host relay --teams /data/teams.db      # or PLURAL_RELAY_TEAMS=/data/teams.db
+```
+
+Without it the relay serves no teams. The file holds each team's signing key, so keep it private
+(Plural creates it readable by its owner only) and back it up; losing it means the teams have to
+be created again. Prompts, replies and files never go to the directory.
+
+Anyone who can reach the relay can create a team — at most 3 per address per 10 minutes, 3 owned
+by one key and 500 in all — so put the relay behind a network rule if it should serve only you. In
+a container, mount a volume for the file.
+
+For a team that lives only as long as your laptop, `plural team create <name> --tunnel ngrok`
+starts this relay and a tunnel to it for you, see
+[a team behind a tunnel](/docs/teams#a-team-on-your-own-machine-behind-a-tunnel).
+
+## Deploy it
+
+### Railway
+
+Create a service from the repository and set the variable
+`RAILWAY_DOCKERFILE_PATH=deploy/relay.Dockerfile`, or point the service's config file at
+[`deploy/railway/relay.json`](https://github.com/Plural-Organization/Plural/blob/main/deploy/railway/relay.json).
+Generate a domain for it. Railway terminates TLS, so the relay is at
+`wss://<name>.up.railway.app`. The relay listens on the `PORT` Railway gives it and answers
+`/healthz`. Set `PLURAL_RELAY_BIND` to change the address it binds; the images set it to `0.0.0.0`.
+
+### Your own server
+
+On a machine with Docker and a domain pointing to it:
+
+```bash
+cd deploy
+RELAY_DOMAIN=relay.example.com docker compose up -d
+```
+
+Caddy gets a certificate from Let's Encrypt and renews it, and the relay is at
+`wss://relay.example.com`.
+
+### Render
+
+[`render.yaml`](https://github.com/Plural-Organization/Plural/blob/main/render.yaml) is a
+blueprint with the relay as a web service and a host as a worker with a disk.

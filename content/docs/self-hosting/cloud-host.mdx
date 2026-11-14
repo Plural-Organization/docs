@@ -1,0 +1,41 @@
+---
+title: The host in the cloud
+description: Run a host as a service, so the agent keeps working when your laptop is closed.
+icon: Cloud
+---
+
+The image
+[`deploy/host.Dockerfile`](https://github.com/Plural-Organization/Plural/blob/main/deploy/host.Dockerfile)
+runs a host as a service. Give it a volume at `/data`, which keeps the log, the room, the host key
+and the workspace across restarts, and these variables:
+
+| Variable | |
+|---|---|
+| `PLURAL_RELAY_URL` | **Required.** For example `wss://relay.example.com` |
+| `ANTHROPIC_API_KEY` | Or another provider, see [Configuration](/docs/configuration) |
+| `GIT_URL` | The repository the agent works on, cloned into the workspace the first time. A token in the URL is removed from the clone's remote |
+| `GIT_BRANCH` | Optional |
+| `PLURAL_ROOM` | Optional, a fixed room id. Without it the host picks one and keeps it in `/data/room` |
+| `PLURAL_HOST_NAME` | Optional, the name the room sees |
+
+When it starts, the host prints the room, the room link and the host link to its log. Open the
+host link in the web client or with `plural join` to approve actions and create more invites.
+
+<Callout type="warn" title="Keep the logs private">
+  Anyone who can read the log can become the host. Start the host with `PLURAL_ADMISSION=open`
+  only if nobody is there to let people in, and keep the link private then.
+</Callout>
+
+## Where to run it
+
+- **Railway:** a service with `RAILWAY_DOCKERFILE_PATH=deploy/host.Dockerfile` (or
+  [`deploy/railway/host.json`](https://github.com/Plural-Organization/Plural/blob/main/deploy/railway/host.json))
+  and a volume at `/data`.
+- **Render:** the `plural-host` worker in
+  [`render.yaml`](https://github.com/Plural-Organization/Plural/blob/main/render.yaml).
+- **Any VM:**
+  [`deploy/cloud-init.yaml`](https://github.com/Plural-Organization/Plural/blob/main/deploy/cloud-init.yaml)
+  installs Docker, builds the image and runs it. Fill in the three values at the top.
+
+The image runs as an unprivileged user and has git, ssh, curl and ripgrep. A project that needs
+another toolchain, such as Node or Go, builds its own image `FROM` this one.

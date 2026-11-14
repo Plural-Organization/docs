@@ -1,0 +1,65 @@
+---
+title: Running Plural on a server
+description: Where the relay and the host can live, and which setup fits — from a tunnel for an afternoon to a relay your whole team shares.
+icon: Server
+---
+
+A room has two parts, and each can live anywhere:
+
+- The **relay** routes frames between the host and the people in the room. It never decides
+  permissions and never stores content. Run one per team, or share one.
+- The **host** runs the agent with your key and keeps the log. On a server it connects *out* to
+  the relay, so it needs no public address and no open port.
+
+People join with an invite from the terminal (`plural join "wss://…"`) or from the web client. A
+web client served over https can only reach a relay over `wss://`, which is why the relay sits
+behind TLS.
+
+<Callout title="Just trying it?">
+  You do not need any of this. `plural` already works alone, on your network and over the
+  internet through the Plural relay. See [Share a session](/docs/usage/sharing) first.
+</Callout>
+
+## Which setup fits
+
+| You want | Run |
+|---|---|
+| to try it alone | `plural` |
+| to show a session to someone on your network | `F2` → Session → *Same network*, then `plural` |
+| to show a session to someone anywhere, right now | `plural --tunnel cloudflared` |
+| a link that stays the same for your team | a [relay](/docs/self-hosting/relay) on Railway, Render or your own server, then `plural --relay wss://…` |
+| an agent that keeps running when your laptop is closed | [the host in the cloud](/docs/self-hosting/cloud-host) |
+| a host on a home server or a Mac mini | [your own machine](/docs/self-hosting/own-machine) |
+
+<Cards>
+  <Card title="The relay" href="/docs/self-hosting/relay" description="Limits, proxies, clients-only mode, team directory and deploy recipes for Railway, Render and Docker." />
+  <Card title="The host in the cloud" href="/docs/self-hosting/cloud-host" description="An agent that keeps working on a server, with a volume, a repository and a fixed room." />
+  <Card title="Your own machine" href="/docs/self-hosting/own-machine" description="Keep a host running as a systemd or launchd service on a Mac mini or a home server." />
+</Cards>
+
+## Options for scripts and servers
+
+The choices you make in the client exist as options too: `--relay <url>` for the internet and
+`--bind 0.0.0.0 --public-url ws://<your address>:<port>` for the network. Every option can also be
+an environment variable, and a flag wins over a variable. An address given as a flag also wins
+over the saved choice in the client.
+
+| Option | Variable |
+|---|---|
+| `--relay` | `PLURAL_RELAY_URL` |
+| `--bind` | `PLURAL_BIND_HOST` |
+| `--public-url` | `PLURAL_PUBLIC_URL` |
+| `--port` | `PLURAL_PORT` |
+
+## When something drops
+
+If the relay restarts or the network drops, nothing needs to be done. The host reconnects on its
+own within a few seconds and takes its room back. Guests see *connection lost, reconnecting…*,
+keep their seat and carry on. If a tunnel stops, the host shows a warning in the conversation,
+because the links through it no longer work.
+
+<Callout type="warn" title="Trust the relay you pick">
+  A relay sees who connects and when, and the size of every message. Use one you run yourself or
+  one you trust. Guests use the room link and wait for you to let them in, see
+  [Let people in](/docs/usage/sharing#let-people-in).
+</Callout>

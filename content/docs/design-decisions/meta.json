@@ -1,0 +1,19 @@
+{
+  "title": "Design decisions",
+  "icon": "Landmark",
+  "pages": [
+    "index",
+    "0001-hexagonal-event-sourced-host",
+    "0002-own-harness-official-sdk-providers",
+    "0003-simple-compaction",
+    "0004-prompt-modes",
+    "0005-typescript-client",
+    "0006-fullscreen-opentui",
+    "0007-team-presence",
+    "0008-host-plugins",
+    "0009-plugin-hooks",
+    "0010-plugin-asides",
+    "0011-plugin-questions",
+    "0012-compaction-keeps-a-tail"
+  ]
+}

@@ -1,0 +1,82 @@
+---
+title: Session state
+description: How a session's modes, context, queue and policy travel as commands and events.
+icon: Activity
+---
+
+Everything a client shows is a projection of `SessionState`, which it rebuilds from durable
+events. This page covers the parts that describe the session itself.
+
+## Prompt mode
+
+`session.set_prompt_mode` (host only) appends `session.prompt_mode_changed`.
+`SessionState.prompt_mode` is:
+
+- `open` — participant prompts go straight to the agent.
+- `review` — they become proposals the host decides on.
+
+See [ADR 0004](/docs/design-decisions/0004-prompt-modes).
+
+## Permission mode
+
+`session.set_permission_mode` (host only) appends `session.permission_mode_changed`.
+`SessionState.permission_mode` is one of:
+
+| Mode | What the agent may do |
+|---|---|
+| `default` | Edits and commands ask |
+| `accept_edits` | Writes are allowed |
+| `plan` | Writes and commands that no rule allows are denied, and each prompt carries a plan-mode note to the agent |
+| `auto` | Writes and commands are allowed |
+
+Deny rules and the guest-turn taint apply in every mode. The host resets it to `default` on start.
+
+## Agent
+
+`SessionState.agent` names the agent that answers (for example `anthropic · claude-opus-5-5`) and
+follows the durable `agent.changed` event. It changes only while no run is active.
+
+## Context
+
+`SessionState.context` holds the agent's context fill: `tokens`, `window` and `compact_at`. It also
+holds:
+
+- `parts` — what the context is spent on. Each has a `kind` (`system`, `skills`, `tools`,
+  `messages` or `tool_results`, with the tool's `name`) and its `tokens`, estimated from length
+  and scaled to the provider's count.
+- `hit` — the share of the latest request read from the provider's cache, `null` before one was
+  measured.
+
+It follows `context.usage`, which the host appends after every model response, after a compaction
+and when the model changes.
+
+**Compaction.** `context.compact` (host only) starts a compaction at once when the agent is idle,
+as a run with an empty `prompt_id`; during a run it is deferred to the next step. A transient
+`context.compacting` (`run_id`, `tokens_before`) marks the start of every compaction, automatic or
+requested. `context.compacted` marks its end: the `summary`, `tokens_before` and `kept_from`, the
+first message kept as it is after the summary (`prompt:<prompt id>` or `call:<tool call id>`, or
+`null` when nothing was kept). See [ADR 0012](/docs/design-decisions/0012-compaction-keeps-a-tail).
+
+## Queue
+
+A prompt accepted while a run is active is appended to `SessionState.queue` (`prompt.accepted`
+with an active run). It leaves with `prompt.dequeued` and a reason:
+
+| Reason | When |
+|---|---|
+| `delivered` | The agent takes it |
+| `cancelled` | The author or the host removes it with `queue.cancel` |
+| `dropped` | The run is aborted or the host restarts |
+
+## Live output
+
+While `bash` runs, the host broadcasts the transient `tool.output` with whole lines, batched at
+most every 100 ms and at most 64 KB per call, after redaction. `tool.ended` still carries the
+complete output. Clients show the tail and must not rely on receiving every chunk.
+
+## Policy
+
+`policy.add` and `policy.remove` (host only) append `policy.rule_added` and `policy.rule_removed`
+events. The live session rules are `SessionState.policy`; the built-in rules arrive in
+`session.welcome.base_policy`. `Always` and `Block` approval decisions are recorded as rules by
+the host.

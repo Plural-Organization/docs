@@ -1,0 +1,24 @@
+---
+title: Design decisions
+description: Why Plural is built the way it is — one short record for every decision that shaped it.
+icon: Landmark
+---
+
+Each page is an *architecture decision record* (ADR): the problem, what was decided, and what it costs. They are short on purpose and never rewritten after the fact — when a decision changes, a new record supersedes the old one, and both stay.
+
+<Callout title="Reading order">Start with 0001 (the host and its event log) and 0007 (teams). Most of the others build on them.</Callout>
+
+<Cards>
+  <Card title="0001 · Hexagonal host with an event log as source of truth" href="/docs/design-decisions/0001-hexagonal-event-sourced-host" description={"accepted — One agent, many clients (TUI, web, bot), untrusted relay, late joiners and reconnects."} />
+  <Card title="0002 · Own agent loop, providers on official SDKs" href="/docs/design-decisions/0002-own-harness-official-sdk-providers" description={"accepted — The PolicyGate must sit inside the agent loop, and the event log is the only source of truth."} />
+  <Card title="0003 · Simple, host-side context compaction" href="/docs/design-decisions/0003-simple-compaction" description={"superseded — The agent loop keeps the whole conversation in memory and resends it on every model call."} />
+  <Card title="0004 · Open and review prompt modes" href="/docs/design-decisions/0004-prompt-modes" description={"accepted — A guest's prompt used to become a proposal that the host had to approve before the agent saw it."} />
+  <Card title="0005 · TypeScript client, Python host" href="/docs/design-decisions/0005-typescript-client" description={"accepted — The terminal client is a Textual app."} />
+  <Card title="0006 · Full-screen terminal UI on OpenTUI" href="/docs/design-decisions/0006-fullscreen-opentui" description={"accepted — ADR 0005 chose Ink in inline mode so the transcript would live in the terminal's own scrollback."} />
+  <Card title="0007 · Team presence" href="/docs/design-decisions/0007-team-presence" description={"accepted — Everyone runs their own host with their own agent and API key."} />
+  <Card title="0008 · Host plugins with slash commands" href="/docs/design-decisions/0008-host-plugins" description={"accepted — Hosts want their own commands in a room: /review that sends the current diff to the agent, /deploy that only the host may run, /hello for a quick reply."} />
+  <Card title="0009 · Plugin hooks" href="/docs/design-decisions/0009-plugin-hooks" description={"accepted — ADR 0008 gave plugins commands and tools, both of which run only when someone calls them."} />
+  <Card title="0010 · Plugin asides and private windows" href="/docs/design-decisions/0010-plugin-asides" description={"accepted — A plugin such as /btw wants to answer a side question about the session."} />
+  <Card title="0011 · Plugins ask the person who ran them" href="/docs/design-decisions/0011-plugin-questions" description={"accepted — A plugin command could reply, prompt the agent and show a window, but not ask anything back: /deploy cannot let someone pick staging or prod, and cannot ask \"are you sure?\" before it runs a script."} />
+  <Card title="0012 · Compaction keeps the newest turns" href="/docs/design-decisions/0012-compaction-keeps-a-tail" description={"accepted — ADR 0003 replaced the whole conversation with one summary and the run's prompt."} />
+</Cards>
